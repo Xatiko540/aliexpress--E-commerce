@@ -2,29 +2,30 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const authStore = useAuthStore()
   const userStore = useUserStore()
 
-  // Дождаться инициализации
-  if (!authStore.isInitialized) {
+  // Пропустить если уже есть пользователь
+  if (authStore.user && authStore.isInitialized) return
+
+  // Только на клиенте вызываем fetchUser
+  if (process.client && !authStore.isInitialized) {
     userStore.isLoading = true
-    try { await authStore.fetchUser() } finally { userStore.isLoading = false }
+    try {
+      await authStore.fetchUser()
+    } catch (e) {
+      console.error('❌ Middleware: auth failed', e)
+    } finally {
+      userStore.isLoading = false
+    }
   }
 
-  try {
-    await authStore.fetchUser()
-  } catch (e) {
-    console.error('❌ Middleware: auth failed', e)
-  } finally {
-    userStore.isLoading = false
-  }
-
-  if (!authStore.user) {
+  // ❗️Редиректим только на клиенте
+  if (process.client && !authStore.user) {
     return redirectIfNeeded(to)
   }
 })
 
-// 🔐 вынеси проверку в функцию
 function redirectIfNeeded(to: any) {
   const protectedPaths = [
-    '/checkout', '/orders', '/settings', '/admin',
+    '/checkout', '/orders', '/settings', '/topup', '/admin',
     '/admin/bonuses', '/admin/buybacks', '/admin/categories', '/admin/clients',
     '/admin/create', '/admin/history', '/admin/index', '/admin/levels',
     '/admin/login', '/admin/manual', '/admin/manualbuybacks', '/admin/orders',
@@ -34,9 +35,7 @@ function redirectIfNeeded(to: any) {
   ]
 
   if (protectedPaths.includes(to.path)) {
-    if (process.client) {
-      sessionStorage.setItem('redirectAfterAuth', to.fullPath)
-    }
+    sessionStorage.setItem('redirectAfterAuth', to.fullPath)
     return navigateTo('/auth')
   }
 }

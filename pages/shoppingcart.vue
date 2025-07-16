@@ -121,6 +121,15 @@ const user = computed(() => authStore.user)
 
 const selectedArray = ref<{ id: number }[]>([])
 
+
+
+useHead({
+  title: 'Aliexpress | Shopping Cart',
+  meta: [
+    { name: 'description', content: 'Manage your Shopping Cart on Aliexpress' }
+  ]
+})
+
 onMounted(() => {
   setTimeout(() => {
     userStore.isLoading = false

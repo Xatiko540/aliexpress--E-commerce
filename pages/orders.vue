@@ -91,6 +91,14 @@ interface Order {
 const orders = ref<Order[]>([])
 const isLoading = ref(true)
 
+
+useHead({
+  title: 'Aliexpress | Orders',
+  meta: [
+    { name: 'description', content: 'Manage your orders on Aliexpress' }
+  ]
+})
+
 watchEffect(async () => {
   if (!authStore.isInitialized) return
 

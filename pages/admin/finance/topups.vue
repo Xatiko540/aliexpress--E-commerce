@@ -1,7 +1,20 @@
 <template>
   <AdminLayout>
     <div class="max-w-[1200px] mx-auto px-4 py-6">
-      <h1 class="text-2xl font-bold mb-4">Заявки на пополнение</h1>
+      <div class="flex items-center justify-between mb-4">
+        <h1 class="text-2xl font-bold">Заявки на пополнение</h1>
+        <button @click="fetchRequests" class="text-sm text-blue-600 underline">🔄 Обновить</button>
+      </div>
+
+      <!-- 🔽 Фильтр по статусу -->
+      <div class="mb-4">
+        <select v-model="status" class="border p-2 rounded">
+          <option value="">Все</option>
+          <option value="PENDING">Ожидают</option>
+          <option value="APPROVED">Одобрены</option>
+          <option value="REJECTED">Отклонены</option>
+        </select>
+      </div>
 
       <div class="overflow-auto bg-white rounded-lg shadow p-4">
         <table class="min-w-full text-sm">
@@ -10,6 +23,7 @@
               <th class="text-left p-2">ID</th>
               <th class="text-left p-2">Email</th>
               <th class="text-left p-2">Сумма</th>
+              <th class="text-left p-2">Stripe ID</th>
               <th class="text-left p-2">Статус</th>
               <th class="text-left p-2">Дата</th>
               <th class="text-left p-2">Действия</th>
@@ -20,8 +34,12 @@
               <td class="p-2">{{ r.id }}</td>
               <td class="p-2">{{ r.user.email }}</td>
               <td class="p-2">{{ r.amount }}₽</td>
+              <td class="p-2 text-xs text-gray-500 break-all">{{ r.stripeId }}</td>
               <td class="p-2">
                 <span :class="statusClass(r.status)">{{ r.status }}</span>
+                <div v-if="r.status === 'REJECTED'" class="text-xs text-red-500 mt-1 italic">
+                  Отклонено админом
+                </div>
               </td>
               <td class="p-2">{{ formatDate(r.createdAt) }}</td>
               <td class="p-2 space-x-2">
@@ -45,18 +63,23 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import AdminLayout from '@/layouts/admin.vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const requests = ref([])
+const status = ref('') // 🔄 Статус-фильтр
 
 const fetchRequests = async () => {
   try {
-    const res = await $fetch('/api/admin/topup-requests', { credentials: 'include' })
+    const res = await $fetch('/api/admin/topup-requests', {
+      credentials: 'include',
+      query: status.value ? { status: status.value } : {}
+    })
     requests.value = res.data
   } catch (e) {
+    console.error('Ошибка загрузки заявок', e)
     alert('Ошибка загрузки заявок')
   }
 }
@@ -82,4 +105,5 @@ const reject = async (id) => {
 }
 
 onMounted(fetchRequests)
+watch(status, fetchRequests) // 🔁 Автообновление при изменении фильтра
 </script>

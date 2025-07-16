@@ -162,6 +162,14 @@ let total = ref(0)
 let currentAddress = ref(null)
 let isProcessing = ref(false)
 
+
+useHead({
+  title: 'Aliexpress | Checkout',
+  meta: [
+    { name: 'description', content: 'Manage your Checkout on Aliexpress' }
+  ]
+})
+
 onBeforeMount(async () => {
   if (userStore.checkout.length < 1) return router.push('/shoppingcart')
 

@@ -32,11 +32,12 @@ export default defineEventHandler(async (event) => {
     { expiresIn: '7d' }
   )
 
-  setCookie(event, 'auth_token', token, {
-    httpOnly: true,
-    sameSite: true,
-    maxAge: 60 * 60 * 24 * 7
-  })
+setCookie(event, 'auth_token', token, {
+  httpOnly: true,
+  sameSite: true,
+  maxAge: 60 * 60 * 24 * 7,
+  path: '/' // ОБЯЗАТЕЛЕН!
+})
 
   return {
     success: true,

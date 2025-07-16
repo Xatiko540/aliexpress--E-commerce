@@ -64,49 +64,49 @@
                                 </NuxtLink>
                             </div>
                         </div>
-                        <div class="border-b"/>
-            <ul class="bg-white ">
+                      <div class="border-b"></div>
+                      <ul class="bg-white">
+                        <li 
+                          @click="navigateTo(`/chat?name=${authStore.user?.username ?? 'anonymity'}`)"
+                          class="text-[13px] py-2 px-4 w-full hover:bg-gray-200 flex items-center gap-2"
+                        >
+                          <Icon name="fluent:chat-16-regular" size="16" />
+                          <span>Message Center</span>
+                        </li>
 
-              <li 
-                @click="navigateTo(`/chat?name=${authStore.user?.username ?? ' anonymity'}`)"
-                class="text-[13px] py-2 px-4 w-full hover:bg-gray-200 flex items-center gap-2"
-              >
-                <!-- <Icon name="fluent:chat-16-regular" size="16" /> -->
-                <span>Message Center</span>
-              </li>
+                        <li 
+                          @click="navigateTo('/topup')"
+                          class="text-[13px] py-2 px-4 w-full hover:bg-gray-200 flex items-center gap-2"
+                        >
+                          <Icon name="mdi:coin-outline" size="16" />
+                          <span>My coins</span>
+                        </li>
 
+                        <li 
+                          @click="navigateTo('/orders')"
+                          class="text-[13px] py-2 px-4 w-full hover:bg-gray-200 flex items-center gap-2"
+                        >
+                          <Icon name="clarity:shopping-bag-line" size="16" />
+                          <span>{{ $t('layout.orders') }}</span>
+                        </li>
 
-              <li 
-                  @click="navigateTo('/topup')"
-                  class="text-[13px] py-2 px-4 w-full hover:bg-gray-200 flex items-center gap-2"
-                >
-                  <!-- <Icon name="mdi:coin-outline" size="16" /> -->
-                  <span>My coins</span>
-                </li>
-              
-              
-                <li 
-                    @click="navigateTo('/orders')"
-                    class="text-[13px] py-2 px-4 w-full hover:bg-gray-200"
-                >
-                    {{ $t('layout.orders') }}
-                </li>
-                
-                <li 
-                    @click="navigateTo('/settings')"
-                    class="text-[13px] py-2 px-4 w-full hover:bg-gray-200"
-                >
-                    {{ $t('layout.settings') }}
-                </li>
+                        <li 
+                          @click="navigateTo('/settings')"
+                          class="text-[13px] py-2 px-4 w-full hover:bg-gray-200 flex items-center gap-2"
+                        >
+                          <Icon name="mdi:cog-outline" size="16" />
+                          <span>{{ $t('layout.settings') }}</span>
+                        </li>
 
-                <li 
-                    v-if="authStore.user"
-                    @click="logout"
-                    class="text-[13px] py-2 px-4 w-full hover:bg-gray-200"
-                >
-                    {{ $t('layout.signOut') }}
-                </li>
-                </ul>
+                        <li 
+                          v-if="authStore.user"
+                          @click="logout"
+                          class="text-[13px] py-2 px-4 w-full hover:bg-gray-200 flex items-center gap-2"
+                        >
+                          <Icon name="material-symbols:logout" size="16" />
+                          <span>{{ $t('layout.signOut') }}</span>
+                        </li>
+                      </ul>
                         
                     </div>
                 </li>

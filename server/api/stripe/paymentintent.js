@@ -4,15 +4,14 @@ import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 
 const config = useRuntimeConfig();
-
+const stripe = new Stripe(config.stripeSkKey, {
+  apiVersion: '2024-04-10'
+});
 const prisma = new PrismaClient();
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event);
 
-
-
-  // Расширяем: если type === 'topup' → требуем токен и добавляем userId в metadata
   if (body.type === 'topup') {
     const token = getCookie(event, 'auth_token');
     if (!token) throw createError({ statusCode: 401, statusMessage: 'Нет токена' });
@@ -43,7 +42,6 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  // Поведение по умолчанию (не сломано!)
   return await stripe.paymentIntents.create({
     amount: Number(body.amount),
     currency: 'usd',

@@ -63,6 +63,13 @@ let topupClientSecret = null
 const isProcessingTopup = ref(false)
 const stripeReady = ref(false)
 
+useHead({
+  title: 'Aliexpress | Settings',
+  meta: [
+    { name: 'description', content: 'Manage your settings on Aliexpress' }
+  ]
+})
+
 
 const handleTopupAmountChange = () => {
   stripeReady.value = false

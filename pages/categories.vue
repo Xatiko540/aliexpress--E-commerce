@@ -47,6 +47,14 @@ const router = useRouter()
 const authStore = useAuthStore()
 const userStore = useUserStore()
 
+
+useHead({
+  title: 'Aliexpress | Categories',
+  meta: [
+    { name: 'description', content: 'Manage your Categories on Aliexpress' }
+  ]
+})
+
 const sidebar = [
   'Recommend', 'Women Clothes', 'Watches', 'Bags', 'Men clothes',
   'Education & Office supplies', 'Sports & Outdoor', 'Home appliances',

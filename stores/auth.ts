@@ -6,9 +6,8 @@ interface UserPayload {
   avatar?: string
   username?: string
   role?: string
+  balance?: number // ✅ добавлено
 }
-
-
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -17,38 +16,46 @@ export const useAuthStore = defineStore('auth', {
     isInitialized: false
   }),
   actions: {
-      async fetchUser() {
-        try {
-          const user = await $fetch('/api/user', { credentials: 'include' })
-          if (!user) throw new Error('Пользователь не найден или не авторизован')
-
-          console.log('✅ [authStore] fetchUser() user:', user)
-
-            this.user = {
-            id: user.id,
-            email: user.email,
-            avatar: user.avatar || '',
-            username: user.username || '',
-            role: user.role || 'user'
-          } as UserPayload
-          this.token = user.token ?? null
-        } catch (err) {
-          // console.error('❌ Ошибка при получении пользователя:', err)
-          this.user = null
-          this.token = null
-        } finally {
-          this.isInitialized = true
+    async fetchUser() {
+      try {
+        interface ApiUser {
+          id: string
+          token?: string
+          email: string
+          username?: string
+          role?: string
+          avatar?: string
+          balance?: number
         }
-      },
+        const user = await $fetch<ApiUser>('/api/user', { credentials: 'include' })
+        if (!user) throw new Error('Пользователь не найден или не авторизован')
+
+        console.log('✅ [authStore] fetchUser() user:', user)
+
+        this.user = {
+          id: user.id,
+          email: user.email,
+          avatar: user.avatar || '',
+          username: user.username || '',
+          role: user.role || 'user',
+          balance: user.balance ?? 0 // ✅ обязательно
+        } as UserPayload
+
+        this.token = user.token ?? null
+      } catch (err) {
+        this.user = null
+        this.token = null
+      } finally {
+        this.isInitialized = true
+      }
+    },
+
     logout() {
       document.cookie = 'auth_token=; Max-Age=0; path=/;'
       this.user = null
       this.token = null
-      // Очистить Pinia-состояние
       this.$reset()
-      // Дополнительно удалить из localStorage, если persist использует его
       localStorage.removeItem('auth')
-
     }
   },
   persist: true

@@ -19,6 +19,14 @@ import { onMounted } from 'vue';
 
 import { useI18n } from 'vue-i18n'
 
+
+useHead({
+  title: 'Aliexpress | Success',
+  meta: [
+    { name: 'description', content: 'Manage your success on Aliexpress' }
+  ]
+})
+
 const { t: $t } = useI18n()
 
 const userStore = useUserStore()

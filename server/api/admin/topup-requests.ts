@@ -1,40 +1,39 @@
-// server/api/admin/topup-requests.ts
+import { defineEventHandler, getQuery, getCookie, createError } from 'h3'
+import { PrismaClient } from '@prisma/client'
+import jwt from 'jsonwebtoken'
 
-import { defineEventHandler, getQuery, getCookie, createError } from 'h3';
-import { PrismaClient } from '@prisma/client';
-import jwt from 'jsonwebtoken';
-
-const prisma = new PrismaClient();
+const prisma = new PrismaClient()
 
 export default defineEventHandler(async (event) => {
-  const authToken = getCookie(event, 'auth_token');
-  if (!authToken) throw createError({ statusCode: 401, statusMessage: 'Нет токена' });
+  const token = getCookie(event, 'auth_token')
+  if (!token) throw createError({ statusCode: 401, statusMessage: 'Нет токена' })
 
-  const config = useRuntimeConfig();
+  const config = useRuntimeConfig()
+  const decoded = jwt.verify(token, config.jwtSecret)
 
-  let payload;
-  try {
-    payload = jwt.verify(authToken, config.jwtSecret);
-    if (!payload || typeof payload !== 'object' || !('id' in payload)) {
-      throw new Error('Неверный токен');
-    }
-  } catch {
-    throw createError({ statusCode: 403, statusMessage: 'Нет доступа' });
+  if (typeof decoded !== 'object' || !decoded || !('id' in decoded)) {
+    throw createError({ statusCode: 401, statusMessage: 'Неверный токен' })
   }
 
-  const admin = await prisma.user.findUnique({ where: { id: payload.id } });
-  if (!admin || admin.role !== 'admin') throw createError({ statusCode: 403, statusMessage: 'Нет доступа' });
+  const user = await prisma.user.findUnique({
+    where: { id: decoded.id },
+    select: { id: true, role: true }
+  })
 
-  const query = getQuery(event);
-  const status = query.status as string;
-  const page = parseInt(query.page as string) || 1;
-  const limit = parseInt(query.limit as string) || 10;
-  const skip = (page - 1) * limit;
+  if (!user) throw createError({ statusCode: 401, statusMessage: 'Пользователь не найден' })
+  // if (user.role !== 'admin') throw createError({ statusCode: 403, statusMessage: 'Только для администраторов' })
 
-  const allowedStatuses = ['PENDING', 'APPROVED', 'REJECTED'] as const;
-  const whereClause = allowedStatuses.includes(status as any)
-    ? { status: status as any }
-    : {};
+  const query = getQuery(event)
+  const status = (query.status || '') as string
+  const page = parseInt(query.page as string) || 1
+  const limit = parseInt(query.limit as string) || 10
+  const skip = (page - 1) * limit
+
+  const allowedStatuses = ['PENDING', 'APPROVED', 'REJECTED'] as const
+  const whereClause =
+    status && allowedStatuses.includes(status as any)
+      ? { status: status as any }
+      : {}
 
   const [total, requests] = await Promise.all([
     prisma.topUpRequest.count({ where: whereClause }),
@@ -45,7 +44,7 @@ export default defineEventHandler(async (event) => {
       take: limit,
       include: { user: true }
     })
-  ]);
+  ])
 
   return {
     success: true,
@@ -53,5 +52,5 @@ export default defineEventHandler(async (event) => {
     total,
     pages: Math.ceil(total / limit),
     data: requests
-  };
-});
+  }
+})

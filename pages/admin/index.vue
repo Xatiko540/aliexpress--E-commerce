@@ -128,6 +128,14 @@ const withdrawals = ref([])
 const totalSales = ref(0)
 const totalBalance = ref(0)
 
+
+useHead({
+  title: 'Aliexpress | Admin Dashboard',
+  meta: [
+    { name: 'description', content: 'Manage your Admin Dashboard on Aliexpress' }
+  ]
+})
+
 const fetchStats = async () => {
   const results = await Promise.allSettled([
     $fetch('/api/prisma/get-all-products'),
@@ -145,7 +153,14 @@ const fetchStats = async () => {
   topups.value = topupsRes.status === 'fulfilled' ? topupsRes.value.data : []
   withdrawals.value = withdrawalsRes.status === 'fulfilled' ? withdrawalsRes.value.data : []
 
-  totalSales.value = orders.value.reduce((sum, o) => sum + (o.total || 0), 0)
+  totalSales.value = orders.value.reduce((sum, order) => {
+  const orderSum = (order.orderItem || []).reduce(
+    (subtotal, item) => subtotal + (item.product?.price || 0),
+    0
+  )
+  return sum + orderSum
+}, 0)
+
   totalBalance.value = users.value.reduce((sum, u) => sum + (u.balance || 0), 0)
 }
 

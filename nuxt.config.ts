@@ -64,6 +64,7 @@ robots: [
     jwtSecret: process.env.JWT_SECRET || 'supersecretkey123',
     smtpUser: process.env.SMTP_USER,
     smtpPass: process.env.SMTP_PASS,
+    stripeSkKey: process.env.STRIPE_SK_KEY,
     public: {
       stripePk: process.env.STRIPE_PK_KEY || '',
     },

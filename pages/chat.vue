@@ -50,6 +50,14 @@ const router = useRouter()
 const authStore = useAuthStore()
 const userStore = useUserStore()
 
+
+useHead({
+  title: 'Aliexpress | Chat',
+  meta: [
+    { name: 'description', content: 'Manage your Chat on Aliexpress' }
+  ]
+})
+
 const chats = ref([
   {
     id: 1,

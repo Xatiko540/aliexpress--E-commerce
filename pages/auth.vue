@@ -182,6 +182,13 @@ const sentEmail = ref('')
 const authStore = useAuthStore()
 const userStore = useUserStore()
 
+useHead({
+  title: 'Aliexpress | Auth',
+  meta: [
+    { name: 'description', content: 'Manage your authentication on Aliexpress' }
+  ]
+})
+
 onMounted(() => {
   authStore.fetchUser()
 })

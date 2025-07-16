@@ -65,15 +65,33 @@
         <hr />
 
 
-        <!-- Withdrawal Request -->
-        <div>
-          <h2 class="text-lg font-semibold mb-2">Withdrawal of funds</h2>
-          <form @submit.prevent="submitWithdraw" class="space-y-2">
-            <input type="number" v-model.number="withdrawAmount" placeholder="Sum" class="border rounded w-full p-2" />
-            <input type="text" v-model="cardInfo" placeholder="Card (**** **** **** 1234)" class="border rounded w-full p-2" />
-            <button class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Request withdrawal</button>
-          </form>
-        </div>
+<!-- Withdrawal Request -->
+<div>
+  <h2 class="text-lg font-semibold mb-2">Withdrawal of funds</h2>
+  <form @submit.prevent="submitWithdraw" class="space-y-2">
+    <input
+      type="number"
+      v-model.number="withdrawAmount"
+      placeholder="Sum (₽)"
+      class="border rounded w-full p-2"
+      min="1"
+    />
+    <input
+      type="text"
+      v-model="cardInfo"
+      placeholder="Card (**** **** **** 1234)"
+      class="border rounded w-full p-2"
+    />
+    <p v-if="withdrawError" class="text-red-600 text-sm font-medium">{{ withdrawError }}</p>
+    <button
+      :disabled="isWithdrawing"
+      class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
+    >
+      <span v-if="isWithdrawing">Sending...</span>
+      <span v-else>Request withdrawal</span>
+    </button>
+  </form>
+</div>
 
         <hr />
 
@@ -110,6 +128,56 @@ let topupCard = null
 let topupClientSecret = null
 const isProcessingTopup = ref(false)
 const stripeReady = ref(false)
+
+
+
+
+const isWithdrawing = ref(false)
+const withdrawError = ref('')
+
+const submitWithdraw = async () => {
+  withdrawError.value = ''
+
+  if (!withdrawAmount.value || withdrawAmount.value <= 0) {
+    withdrawError.value = 'Введите корректную сумму'
+    return
+  }
+
+  if (!cardInfo.value || cardInfo.value.length < 4) {
+    withdrawError.value = 'Введите корректные данные карты'
+    return
+  }
+
+  if (withdrawAmount.value > user.balance) {
+    withdrawError.value = 'Недостаточно средств на балансе'
+    return
+  }
+
+  try {
+    isWithdrawing.value = true
+    await $fetch('/api/withdrawal-request', {
+      method: 'POST',
+      body: {
+        amount: withdrawAmount.value,
+        cardInfo: cardInfo.value
+      }
+    })
+    await authStore.fetchUser() 
+    router.push('/success')
+  } catch (e) {
+    withdrawError.value = e?.data?.message || 'Ошибка при отправке запроса'
+  } finally {
+    isWithdrawing.value = false
+  }
+}
+
+
+useHead({
+  title: 'Aliexpress | Balance',
+  meta: [
+    { name: 'description', content: 'Manage your Balance on Aliexpress' }
+  ]
+})
 
 
 const handleTopupAmountChange = () => {
@@ -179,6 +247,7 @@ const submitStripeTopup = async () => {
         stripeId: result.paymentIntent.id
       }
     })
+    await authStore.fetchUser() 
     router.push('/success') 
   }
 }
@@ -203,20 +272,20 @@ const updatePassword = async () => {
   }
 }
 
-const submitWithdraw = async () => {
-  try {
-    await $fetch('/api/withdrawal-request', {
-      method: 'POST',
-      body: {
-        amount: withdrawAmount.value,
-        cardInfo: cardInfo.value
-      }
-    })
-    router.push('/success') // ✅ перенаправляем
-  } catch (e) {
-    alert('Ошибка: ' + e?.data?.message)
-  }
-}
+// const submitWithdraw = async () => {
+//   try {
+//     await $fetch('/api/withdrawal-request', {
+//       method: 'POST',
+//       body: {
+//         amount: withdrawAmount.value,
+//         cardInfo: cardInfo.value
+//       }
+//     })
+//     router.push('/success') // ✅ перенаправляем
+//   } catch (e) {
+//     alert('Ошибка: ' + e?.data?.message)
+//   }
+// }
 
 const deleteAccount = async () => {
   if (!confirm('Are you sure you want to delete your account?')) return

@@ -98,6 +98,14 @@ const isUpdate = ref(false)
 const isWorking = ref(false)
 const error = ref<null | { type: string; message: string }>(null)
 
+
+useHead({
+  title: 'Aliexpress | Address',
+  meta: [
+    { name: 'description', content: 'Manage your Address on Aliexpress' }
+  ]
+})
+
 watchEffect(async () => {
   if (!user.value?.id) return
 
