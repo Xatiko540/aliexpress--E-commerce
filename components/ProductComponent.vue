@@ -14,7 +14,11 @@
   >
     <template v-if="!isLoading">
       <NuxtLink :to="`/item/${product.id}`">
-        <img class="rounded-t w-full h-[180px] object-cover" :src="product.url" />
+        <img 
+        class="rounded-t w-full h-[180px] object-cover" 
+        :src="product.images?.[0]?.url" 
+         alt="Product Image"
+         />
 
         <div id="ProductDetails">
           <span class="flex items-center justify-start gap-3 px-1 pt-1">

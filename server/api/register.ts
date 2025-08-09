@@ -1,4 +1,3 @@
-// server/api/register.ts
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcrypt'
 import nodemailer from 'nodemailer'
@@ -8,8 +7,15 @@ const prisma = new PrismaClient()
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
-  const email = body.email.trim().toLowerCase()
-  const { password } = body
+  const query = getQuery(event)
+
+  const email = body.email?.trim().toLowerCase()
+  const password = body.password
+  const username = body.username || null
+
+  // Приоритет — body.refCode, если нет — берем из URL
+  const refCode = body.refCode || query.ref || null
+  const managerId = null // Убираем поиск referralLink, сохраняем только refCode как строку
 
   if (!email || !password) {
     throw createError({ statusCode: 400, statusMessage: 'Email and password are required' })
@@ -25,24 +31,35 @@ export default defineEventHandler(async (event) => {
   const user = await prisma.user.create({
     data: {
       email,
+      username,
       password: hashed,
+      refCode,
+      managerId,
     }
   })
 
   const config = useRuntimeConfig()
 
   const token = jwt.sign(
-  { id: user.id, email: user.email },
-  config.jwtSecret,
-  { expiresIn: '7d' }
-)
+    { id: user.id, email: user.email },
+    config.jwtSecret,
+    { expiresIn: '7d' }
+  )
 
-setCookie(event, 'auth_token', token, {
-  httpOnly: true,
-  sameSite: true,
-  maxAge: 60 * 60 * 24 * 7,
-  path: '/' // ОБЯЗАТЕЛЕН!
-})
+  await prisma.activityLog.create({
+    data: {
+      userId: user.id,
+      action: 'registered_by_referral',
+      meta: JSON.stringify({ refCode, managerId }),
+    },
+  })
+
+  setCookie(event, 'auth_token', token, {
+    httpOnly: true,
+    sameSite: true,
+    maxAge: 60 * 60 * 24 * 7,
+    path: '/',
+  })
 
   const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
@@ -54,19 +71,17 @@ setCookie(event, 'auth_token', token, {
     },
   })
 
-  const info = await transporter.sendMail({
+  await transporter.sendMail({
     from: `"AliExpress " <${config.smtpUser}>`,
     to: email,
     subject: 'Welcome!',
-    text: `🎉 Thank you for registering, ${email}! We are glad to see you on AliExpress.`,
+    text: `🎉 Thank you for registering, ${email}!`,
   })
-
-  console.log('📨 Sent registration email:', info.messageId)
 
   return {
     success: true,
-    message: 'User registered and email sent',
-    token, 
+    message: 'User registered',
+    token,
     user: {
       id: user.id,
       email: user.email

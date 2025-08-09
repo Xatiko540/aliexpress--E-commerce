@@ -11,23 +11,23 @@
           <Icon name="ph:x" size="20" />
         </button>
       </div>
-      <nav class="p-4 space-y-2 text-sm">
-        <template v-for="(group, idx) in sidebarItems" :key="idx">
-          <div>
-            <p class="text-gray-500 font-medium mt-4 mb-1">{{ group.label }}</p>
-                <a
-                  v-for="item in group.items"
-                  :key="item.to"
-                  href="#"
-                  @click.prevent="navigate(item.to)"
-                  class="flex items-center gap-2 px-2 py-2 rounded text-gray-700 hover:text-blue-600 hover:bg-blue-50"
-                >
-                  <Icon :name="item.icon" size="16" />
-                  <span>{{ item.text }}</span>
-                </a>
-          </div>
-        </template>
-      </nav>
+        <nav class="p-4 space-y-2 text-sm">
+          <template v-for="(group, idx) in sidebarItems" :key="idx">
+            <div>
+              <p class="text-gray-500 font-medium mt-4 mb-1">{{ group.label }}</p>
+              <router-link
+                v-for="item in group.items"
+                :key="item.to"
+                :to="item.to"
+                class="flex items-center gap-2 px-2 py-2 rounded hover:text-blue-600 hover:bg-blue-50"
+                :class="{ 'bg-blue-100 text-blue-700 font-semibold': route.path === item.to }"
+              >
+                <Icon :name="item.icon" size="16" />
+                <span>{{ item.text }}</span>
+              </router-link>
+            </div>
+          </template>
+        </nav>
     </aside>
 
     <!-- Content Area -->
@@ -125,65 +125,43 @@ const closeSidebar = () => { isSidebarOpen.value = false }
 // sidebar menu
 const sidebarItems = [
   {
-    label: '🏠 Главное',
+    label: ' Главное',
     items: [
       { text: 'Дашборд', to: '/admin', icon: 'ph:house' },
     ]
   },
   {
-    label: '📦 Центр товаров',
+    label: ' Центр товаров',
     items: [
       { text: 'Управление товарами', to: '/admin/products', icon: 'ph:package' },
       { text: 'Добавление товара', to: '/admin/create', icon: 'ph:plus-square' },
-      { text: 'Категория товара', to: '/admin/categories', icon: 'ph:tag' },
-      { text: 'Отзывы о товаре', to: '/admin/reviews', icon: 'ph:chat-circle-text' },
+      // { text: 'Выкупы клиентов', to: '/admin/buybacks', icon: 'ph:recycle' },
+      // { text: 'Ручная переработка', to: '/admin/manualbuybacks', icon: 'ph:toolbox' },
     ]
   },
   {
-    label: '💱 Центр транзакций',
+    label: ' Центр транзакций',
     items: [
-      { text: 'Список заказов', to: '/admin/orders', icon: 'ph:list' },
-      { text: 'Отчёты заказов', to: '/admin/reports', icon: 'ph:chart-bar' },
-      { text: 'История возвратов', to: '/admin/history', icon: 'ph:clock-counter-clockwise' },
-      { text: 'Отзывы о заказах', to: '/admin/reviews', icon: 'ph:chat-centered' },
-      { text: 'Добавить заказ вручную', to: '/admin/manual', icon: 'ph:file-plus' },
+      { text: 'Список заказов (Выкупы,переработка)', to: '/admin/orders', icon: 'ph:list' },
+      // { text: 'История возвратов', to: '/admin/history', icon: 'ph:clock-counter-clockwise' },
+      // { text: 'Добавить заказ вручную', to: '/admin/manual', icon: 'ph:file-plus' },
+      // { text: 'Общая статистика', to: '/admin/stats', icon: 'ph:chart-line' },
+      { text: 'Отчёт по продажам', to: '/admin/sales-report', icon: 'ph:shopping-cart' },
+
     ]
   },
   {
-    label: '👥 Центр пользователей',
+    label: ' Центр пользователей',
     items: [
       { text: 'Список участников', to: '/admin/users', icon: 'ph:users' },
-      { text: 'Уровни участников', to: '/admin/levels', icon: 'ph:stairs' },
-    ]
-  },
-  {
-    label: '💳 Финансовые операции',
-    items: [
+      // { text: 'Уровни участников', to: '/admin/levels', icon: 'ph:stairs' },
       { text: 'Запросы на вывод', to: '/admin/finance/withdrawals', icon: 'ph:currency-dollar-simple' },
-      { text: 'История транзакций', to: '/admin/finance/topups', icon: 'ph:bank' },
+      { text: 'Запросы на пополнение', to: '/admin/finance/topups', icon: 'ph:bank' },
       { text: 'Начисление бонусов', to: '/admin/bonuses', icon: 'ph:gift' },
-    ]
-  },
-  {
-    label: '📊 Статистика и отчёты',
-    items: [
-      { text: 'Общая статистика', to: '/admin/stats', icon: 'ph:chart-line' },
-      { text: 'Отчёт по продажам', to: '/admin/sales-report', icon: 'ph:shopping-cart' },
-    ]
-  },
-  {
-    label: '🔁 Переработка / выкуп',
-    items: [
-      { text: 'Выкупы клиентов', to: '/admin/buybacks', icon: 'ph:recycle' },
-      { text: 'Ручная переработка', to: '/admin/manualbuybacks', icon: 'ph:toolbox' },
-    ]
-  },
-  {
-    label: '🔗 Реферальная система',
-    items: [
       { text: 'Ссылки и активность', to: '/admin/referrals', icon: 'ph:link' },
-      { text: 'Клиенты менеджеров', to: '/admin/clients', icon: 'ph:user-list' },
+      // { text: 'Клиенты менеджеров', to: '/admin/clients', icon: 'ph:user-list' },
     ]
-  }
+  },
+
 ]
 </script>

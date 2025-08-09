@@ -2,11 +2,11 @@
   <MainLayout>
     <div class="w-full max-w-[1150px] mx-auto mt-6 px-3 relative">
       <Swiper
-        :modules="modules"
-        :navigation="{ nextEl: '.swiper-next', prevEl: '.swiper-prev' }"
-        :pagination="{ clickable: true, el: '.swiper-pagination' }"
-        :autoplay="{ delay: 4000, disableOnInteraction: false }"
-        loop
+          :modules="modules"
+          :navigation="{ nextEl: '.swiper-next', prevEl: '.swiper-prev' }"
+          :pagination="{ clickable: true, el: '.swiper-pagination' }"
+          :autoplay="{ delay: 4000, disableOnInteraction: false }"
+          loop
         class="rounded-md overflow-hidden shadow"
       >
         <SwiperSlide>
@@ -63,7 +63,7 @@
           </div>
           <div
             ref="carousel"
-            class="flex transition-transform duration-500 ease-in-out w-full min-h-[300px] overflow-x-auto scroll-smooth snap-x snap-mandatory"
+            class="flex transition-transform duration-500 ease-in-out w-full min-h-[300px] overflow-hidden snap-x snap-mandatory"
             @touchstart="startTouch"
             @touchmove="moveTouch"
           >
@@ -72,15 +72,28 @@
               v-for="(chunk, index) in categoryChunks"
               :key="index"
             >
-              <div
-                v-for="(cat, i) in chunk"
-                :key="i"
-                class="bg-gray-100 p-4 rounded-xl flex items-center justify-between h-full cursor-pointer hover:bg-gray-200"
-                @click="navigateToCategory(cat.title)"
-              >
-                <div class="text-sm font-semibold text-gray-700 max-w-[60%]">{{ cat.title }}</div>
-                <img :src="cat.image" class="w-20 h-20 object-contain rounded" alt="" />
+            <div
+              v-for="(cat, i) in chunk"
+              :key="i"
+              class="flex items-center justify-between bg-white rounded-lg shadow overflow-hidden cursor-pointer hover:shadow-lg transition group h-28 sm:h-32 md:h-36"
+              @click="navigateToCategory(cat.title)"
+            >
+              <!-- Текст -->
+              <div class="p-3 sm:p-4 flex items-center w-1/2">
+                <h3 class="text-xs sm:text-sm md:text-lg font-bold text-gray-800 leading-tight">
+                  {{ cat.title }}
+                </h3>
               </div>
+
+              <!-- Фото -->
+              <div class="w-1/2 h-full flex items-center justify-center bg-white">
+                <img
+                  :src="cat.image"
+                  alt=""
+                  class="h-16 sm:h-20 md:h-24 object-contain transition-transform duration-300 group-hover:scale-105"
+                />
+              </div>
+            </div>
             </div>
           </div>
         </div>
@@ -95,8 +108,13 @@
 
     <div id="IndexPage" class="mt-4 max-w-[1200px] mx-auto px-2">
       <div class="grid xl:grid-cols-6 lg:grid-cols-5 md:grid-cols-4 sm:grid-cols-3 grid-cols-2 gap-4">
-        <template v-if="products?.data">
-          <ProductComponent v-for="p in products.data" :key="p.id" :product="p" />
+        <template v-if="products">
+          <ProductComponent
+            v-for="p in products"
+            :key="p.id"
+            :product="p"
+            class="animate-fade-in"
+          />
         </template>
         <template v-else>
           <div v-for="i in 12" :key="i" class="bg-gray-200 rounded-lg animate-pulse p-4">
@@ -105,6 +123,18 @@
             <div class="h-4 bg-gray-300 rounded w-1/2"></div>
           </div>
         </template>
+          <!-- Индикатор загрузки -->
+      <div v-if="isLoading && hasMore" class="text-center py-4 text-gray-500">
+            Loading...
+          </div>
+
+          <!-- Триггер подгрузки -->
+          <div
+            v-if="hasMore"
+            id="load-more-trigger"
+            class="h-10"
+          ></div>
+
       </div>
     </div>
   </MainLayout>
@@ -119,21 +149,23 @@ import { Navigation, Pagination, Autoplay } from 'swiper/modules'
 import 'swiper/css'
 import 'swiper/css/navigation'
 import 'swiper/css/pagination'
-
 import { useHead } from '#imports'
 
+import MainLayout from '~/layouts/MainLayout.vue'
+import ProductComponent from '~/components/ProductComponent.vue'
+import { useUserStore } from '~/stores/user'
+import { useRouter } from 'vue-router'
+
 const modules = [Navigation, Pagination, Autoplay]
-
-import MainLayout from '~/layouts/MainLayout.vue';
-import { useUserStore } from '~/stores/user';
 const userStore = useUserStore()
+const router = useRouter()
 
+// --- Категории и промо ---
 const promoProducts = [
   { image: 'cat7.avif', price: '$4.48', oldPrice: '$19.97', rating: 4.8, sold: '1,000+' },
   { image: 'cat9.avif', price: '$3.37', oldPrice: '$17.75', rating: 4.7, sold: '3,000+' },
   { image: 'cat12.avif', price: '$0.99', oldPrice: '$9.41', rating: 4.5, sold: '5,000+' },
 ]
-
 const allCategories = [
   { title: 'Plus Sized Clothing', image: 'cat1.webp' },
   { title: 'Computer & Office', image: 'cat2.webp' },
@@ -148,20 +180,16 @@ const allCategories = [
   { title: 'Pet Supplies', image: 'p3.webp' },
 ]
 
-
-
-import { useRouter } from 'vue-router'
-const router = useRouter()
-
+// --- Навигация по категориям ---
 function navigateToCategory(title) {
   router.push({ path: '/categories', query: { cat: title } })
 }
 
-
-
+// --- Слайдер категорий ---
 const startX = ref(0)
 const carousel = ref(null)
 const activeSlide = ref(0)
+
 
 const categoryChunks = computed(() => {
   const size = 6
@@ -171,20 +199,7 @@ const categoryChunks = computed(() => {
   }
   return chunks
 })
-
-
-function shift() {
-  if (carousel.value) {
-    carousel.value.style.transform = `translateX(-${activeSlide.value * 100}%)`
-  }
-}
-
-
-
-
-function startTouch(e) {
-  startX.value = e.touches[0].clientX
-}
+function startTouch(e) { startX.value = e.touches[0].clientX }
 
 function moveTouch(e) {
   if (!carousel.value) return
@@ -193,39 +208,88 @@ function moveTouch(e) {
   startX.value = e.touches[0].clientX
 }
 
-function next() {
-  if (!carousel.value) return
-  carousel.value.scrollLeft += carousel.value.offsetWidth
+function next() { if (carousel.value) carousel.value.scrollLeft += carousel.value.offsetWidth }
+
+function prev() { if (carousel.value) carousel.value.scrollLeft -= carousel.value.offsetWidth }
+
+// --- Пагинация товаров ---
+const products = ref([])
+const page = ref(1)
+const isLoading = ref(false)
+const hasMore = ref(true)
+
+const loadProducts = async () => {
+  if (isLoading.value || !hasMore.value) return
+  isLoading.value = true
+
+  const newProducts = await $fetch(`/api/prisma/get-products-paginated?page=${page.value}&limit=20`)
+
+  if (!newProducts.length) {
+    hasMore.value = false
+  } else {
+    products.value.push(...newProducts)
+    page.value++
+  }
+
+  isLoading.value = false
 }
 
-function prev() {
-  if (!carousel.value) return
-  carousel.value.scrollLeft -= carousel.value.offsetWidth
-}
+onMounted(() => {
+  loadProducts()
 
+  const observer = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting) {
+      loadProducts()
+    }
+  }, { threshold: 1 })
+
+  const sentinel = document.getElementById('load-more-trigger')
+  if (sentinel) observer.observe(sentinel)
+
+  setTimeout(() => { userStore.isLoading = false }, 1000)
+})
 
 useHead({
   title: 'Aliexpress | Home',
-  meta: [
-    { name: 'description', content: 'Welcome to the best store!' }
-  ]
+  meta: [{ name: 'description', content: 'Welcome to the best store!' }]
 })
 
-let products = ref(null)
-onBeforeMount(async () => {
-    products.value = await useFetch('/api/prisma/get-all-products')
-    // console.log('📦 Получены данные:', products.value)
-    
 
-    setTimeout(() => userStore.isLoading = false, 1000)
-})
 </script>
 
 
 
 
-<style scoped>
+<!-- <style scoped>
 ::-webkit-scrollbar {
   display: none;
 }
+</style> -->
+
+
+<style scoped>
+
+::-webkit-scrollbar {
+  display: none;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+.swiper-pagination-bullet {
+  background: rgba(0, 0, 0, 0.4);
+  opacity: 1;
+}
+.swiper-pagination-bullet-active {
+  background: #000;
+}
 </style>
+
+
+
+
+

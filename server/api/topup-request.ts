@@ -1,5 +1,4 @@
 // server/api/topup-request.ts
-
 import { PrismaClient } from '@prisma/client'
 import { defineEventHandler, readBody, createError, getCookie } from 'h3'
 import jwt from 'jsonwebtoken'
@@ -38,12 +37,24 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Отсутствует Stripe ID' })
   }
 
+  // Создаём заявку на пополнение
   const request = await prisma.topUpRequest.create({
     data: {
       userId: user.id,
       amount,
       stripeId,
       status: 'PENDING'
+    }
+  })
+
+  // Создаём транзакцию и привязываем к заявке
+  await prisma.transaction.create({
+    data: {
+      userId: user.id,
+      type: 'TOPUP',
+      amount,
+      details: `Пополнение через Stripe #${stripeId}`,
+      topUpRequestId: request.id
     }
   })
 

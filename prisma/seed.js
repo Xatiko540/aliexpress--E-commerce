@@ -1,7 +1,7 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
-const seller = await prisma.user.findFirst();
+const seller =  prisma.user.findFirst();
 
 async function seedProducts() {
   try {

@@ -9,6 +9,7 @@ export default defineEventHandler(async (event) => {
     where: { category },
     orderBy: { created_at: 'desc' },
     include: {
+      images: true, // добавлено — подтягиваем изображения
       seller: {
         select: {
           id: true,

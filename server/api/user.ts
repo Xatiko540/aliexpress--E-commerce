@@ -29,9 +29,11 @@ export default defineEventHandler(async (event) => {
       id: true,
       email: true,
       role: true,
+      isBalanceFrozen: true,
+      level: true,
       avatar: true,
       username: true,
-      balance: true // ✅ ДОБАВЛЕНО!
+      balance: true 
     }
   })
 
@@ -43,7 +45,9 @@ export default defineEventHandler(async (event) => {
     username: user.username || '',
     avatar: user.avatar || '',
     role: user.role || 'user',
-    balance: user.balance ?? 0, // ✅ ВОЗВРАЩАЕМ
+    isBalanceFrozen: user.isBalanceFrozen,
+    level: user.level, 
+    balance: user.balance ?? 0, 
     token
   }
 })

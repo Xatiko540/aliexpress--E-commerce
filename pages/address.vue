@@ -23,13 +23,13 @@
                         :error="error && error.type == 'address' ? error.message : ''"
                     />
 
-                    <TextInput 
-                        class="w-full mt-2"
-                        placeholder="Zip Code"
-                        v-model:input="zipCode"
-                        inputType="text"
-                        :error="error && error.type == 'zipCode' ? error.message : ''"
-                    />
+                      <TextInput 
+                          class="w-full mt-2"
+                          placeholder="Zip Code"
+                          v-model:input="zipcode"
+                          inputType="text"
+                          :error="error && error.type == 'zipCode' ? error.message : ''"
+                        />
 
                     <TextInput 
                         class="w-full mt-2"
@@ -83,6 +83,15 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '~/stores/user'
 import { useAuthStore } from '~/stores/auth'
 
+interface Address {
+  id?: number
+  name: string
+  address: string
+  zipcode: string
+  city: string
+  country: string
+}
+
 const router = useRouter()
 const userStore = useUserStore()
 const authStore = useAuthStore()
@@ -90,14 +99,13 @@ const user = computed(() => authStore.user)
 
 const contactName = ref('')
 const address = ref('')
-const zipCode = ref('')
+const zipcode = ref('')
 const city = ref('')
 const country = ref('')
-const currentAddress = ref(null)
+const currentAddress = ref<Address | null>(null)
 const isUpdate = ref(false)
 const isWorking = ref(false)
 const error = ref<null | { type: string; message: string }>(null)
-
 
 useHead({
   title: 'Aliexpress | Address',
@@ -109,15 +117,14 @@ useHead({
 watchEffect(async () => {
   if (!user.value?.id) return
 
-  const res = await useFetch(`/api/prisma/get-address-by-user/${user.value.id}`)
-  currentAddress.value = res.data.value
-
-  if (currentAddress.value) {
-    contactName.value = currentAddress.value.name
-    address.value = currentAddress.value.address
-    zipCode.value = currentAddress.value.zipcode
-    city.value = currentAddress.value.city
-    country.value = currentAddress.value.country
+  const { data } = await useFetch<Address>(`/api/prisma/get-address-by-user/${user.value.id}`)
+  if (data.value) {
+    currentAddress.value = data.value
+    contactName.value = data.value.name
+    address.value = data.value.address
+    zipcode.value = data.value.zipcode
+    city.value = data.value.city
+    country.value = data.value.country
     isUpdate.value = true
   }
 
@@ -130,7 +137,7 @@ const submit = async () => {
 
   if (!contactName.value) error.value = { type: 'contactName', message: 'A contact name is required' }
   else if (!address.value) error.value = { type: 'address', message: 'An address is required' }
-  else if (!zipCode.value) error.value = { type: 'zipCode', message: 'A zip code is required' }
+  else if (!zipcode.value) error.value = { type: 'zipCode', message: 'A zip code is required' }
   else if (!city.value) error.value = { type: 'city', message: 'A city is required' }
   else if (!country.value) error.value = { type: 'country', message: 'A country is required' }
 
@@ -140,27 +147,24 @@ const submit = async () => {
   }
 
   const payload = {
-    userId: user.value.id,
+    userId: user.value!.id,
     name: contactName.value,
     address: address.value,
-    zipCode: zipCode.value,
+    zipcode: zipcode.value,
     city: city.value,
     country: country.value,
   }
 
-  if (isUpdate.value && currentAddress.value?.id) {
-    await useFetch(`/api/prisma/update-address/${currentAddress.value.id}`, {
-      method: 'PATCH',
-      body: payload
-    })
-  } else {
-    await useFetch(`/api/prisma/add-address`, {
-      method: 'POST',
-      body: payload
-    })
-  }
+  // Один универсальный вызов
+await $fetch(`/api/prisma/get-address-by-user/${user.value!.id}`, {
+    method: 'POST',
+    body: payload
+  })
 
   isWorking.value = false
   router.push('/checkout')
 }
+
+
+
 </script>

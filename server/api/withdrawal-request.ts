@@ -1,5 +1,4 @@
 // server/api/withdrawal-request.ts
-
 import { PrismaClient } from '@prisma/client';
 import { defineEventHandler, readBody, createError, getCookie } from 'h3';
 import jwt from 'jsonwebtoken';
@@ -38,6 +37,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Неверная информация о карте' });
   }
 
+  // Создаём заявку на вывод
   const withdrawal = await prisma.withdrawal.create({
     data: {
       userId: user.id,
@@ -47,6 +47,18 @@ export default defineEventHandler(async (event) => {
     }
   });
 
+  // Создаём транзакцию, привязанную к выводу
+  await prisma.transaction.create({
+    data: {
+      userId: user.id,
+      type: 'WITHDRAWAL',
+      amount,
+      details: `Вывод на карту ${cardInfo}`,
+      withdrawalId: withdrawal.id
+    }
+  });
+
+  // Логируем действие
   await prisma.activityLog.create({
     data: {
       userId: user.id,

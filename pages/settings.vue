@@ -4,183 +4,262 @@
       <h1 class="text-2xl font-bold mb-6">{{ $t('settings.title') }}</h1>
 
       <div class="bg-white rounded-lg p-6 shadow-md space-y-6">
-        <!-- User Info -->
+        <!-- Информация о пользователе -->
         <div>
           <h2 class="text-lg font-semibold mb-2">{{ $t('settings.profile') }}</h2>
-          <div class="text-sm">{{ $t('settings.email') }}: <strong>{{ user?.email }}</strong></div>
-          <div class="text-sm mt-1">Balance: <strong>{{ user?.balance }}₽</strong></div>
+          <div class="text-sm">{{ $t('settings.email') }}: <strong>{{ authStore.user?.email || 'Загрузка...' }}</strong></div>
         </div>
 
-
-
-        <!-- Update Password -->
+        <!-- Обновление пароля -->
         <div>
           <h2 class="text-lg font-semibold mb-2">{{ $t('settings.updateTitle') }}</h2>
           <form @submit.prevent="updatePassword" class="space-y-2">
-            <input type="password" v-model="newPassword" :placeholder="$t('settings.newPassword')" class="border rounded w-full p-2" />
-            <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">{{ $t('settings.updateBtn') }}</button>
+            <input
+              type="password"
+              v-model="newPassword"
+              :placeholder="$t('settings.newPassword')"
+              class="border rounded w-full p-2"
+            />
+            <button
+              type="submit"
+              class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+              :disabled="!newPassword"
+            >
+              {{ $t('settings.updateBtn') }}
+            </button>
           </form>
         </div>
 
         <hr />
 
-        <!-- Delete Account -->
+        <!-- Удаление аккаунта -->
         <div>
           <h2 class="text-lg font-semibold mb-2 text-red-600">{{ $t('settings.dangerTitle') }}</h2>
-          <button @click="deleteAccount" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">{{ $t('settings.deleteBtn') }}</button>
+          <button
+            @click="deleteAccount"
+            class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+          >
+            {{ $t('settings.deleteBtn') }}
+          </button>
         </div>
       </div>
     </div>
   </MainLayout>
 </template>
 
-<script setup>
-import { ref, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '~/stores/auth'
-import { useUserStore } from '~/stores/user'
-import MainLayout from '~/layouts/MainLayout.vue'
-import { useCookie, useRuntimeConfig } from '#app'
-import { useI18n } from 'vue-i18n'
+<script setup lang="ts">
+import { ref, onMounted, watch } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '~/stores/auth';
+import { useUserStore } from '~/stores/user';
+import { useBuybackStore } from '~/stores/buybacks';
+import MainLayout from '~/layouts/MainLayout.vue';
+import { useCookie, useRuntimeConfig } from '#app';
+import { useI18n } from 'vue-i18n';
 
-const { t: $t } = useI18n()
+const { t: $t } = useI18n();
+const authStore = useAuthStore();
+const userStore = useUserStore();
+const buybackStore = useBuybackStore();
+const router = useRouter();
+const runtimeConfig = useRuntimeConfig();
 
-const authStore = useAuthStore()
-const userStore = useUserStore()
-const user = authStore.user
-const router = useRouter()
+const newPassword = ref('');
+const topUpAmount = ref<number>(0);
+const withdrawAmount = ref<number>(0);
+const cardInfo = ref('');
+const buybackProductId = ref<number>(0);
+const buybackPrice = ref<number>(0);
+const transactions = ref<any[]>([]);
 
-const newPassword = ref('')
-const topUpAmount = ref(0)
-const withdrawAmount = ref(0)
-const cardInfo = ref('')
-const transactions = ref([])
-
-let stripeTopup = null
-let topupElements = null
-let topupCard = null
-let topupClientSecret = null
-const isProcessingTopup = ref(false)
-const stripeReady = ref(false)
+let stripeTopup: any = null;
+let topupElements: any = null;
+let topupCard: any = null;
+let topupClientSecret: string | null = null;
+const isProcessingTopup = ref(false);
+const stripeReady = ref(false);
 
 useHead({
   title: 'Aliexpress | Settings',
-  meta: [
-    { name: 'description', content: 'Manage your settings on Aliexpress' }
-  ]
-})
+  meta: [{ name: 'description', content: 'Manage your settings on Aliexpress' }],
+});
 
-
-const handleTopupAmountChange = () => {
-  stripeReady.value = false
-  if (topUpAmount.value > 0) stripeTopupInit()
-}
-
+// Инициализация Stripe для пополнения
 const stripeTopupInit = async () => {
-  const runtimeConfig = useRuntimeConfig()
-  stripeTopup = Stripe(runtimeConfig.public.stripePk)
+  if (topUpAmount.value < 200) {
+    document.querySelector('#topup-card-error')!.textContent = $t('settings.minAmountError');
+    stripeReady.value = false;
+    return;
+  }
 
   try {
-      console.log('🔍 init topup', topUpAmount.value)
+    console.log('🔍 Initializing Stripe for top-up:', topUpAmount.value);
+    stripeTopup = (window as any).Stripe(runtimeConfig.public.stripePk);
 
-      const res = await $fetch('/api/stripe/paymentintent', {
-        method: 'POST',
-        credentials: 'include',
-        body: {
-          amount: topUpAmount.value,
-          type: 'topup'
-        }
-      }).catch(err => {
-        console.error('❌ paymentintent error:', err.data)
-        throw err
-      })
-    topupClientSecret = res.client_secret
+    const res = await $fetch('/api/stripe/paymentintent', {
+      method: 'POST',
+      credentials: 'include',
+      body: {
+        amount: topUpAmount.value,
+        type: 'topup',
+      },
+    }).catch((err) => {
+      console.error('❌ PaymentIntent error:', err.data);
+      throw err;
+    });
 
-    topupElements = stripeTopup.elements()
-    topupCard = topupElements.create('card')
-    topupCard.mount('#topup-card-element')
-    topupCard.on('change', (event) => {
-      document.querySelector('#topup-card-error').textContent = event.error?.message || ''
-    })
-    stripeReady.value = true
+    topupClientSecret = res.client_secret;
+    topupElements = stripeTopup.elements();
+    topupCard = topupElements.create('card');
+    topupCard.mount('#topup-card-element');
+    topupCard.on('change', (event: any) => {
+      document.querySelector('#topup-card-error')!.textContent = event.error?.message || '';
+    });
+    stripeReady.value = true;
   } catch (e) {
-    stripeReady.value = false
-    document.querySelector('#topup-card-error').textContent = 'Не менеее 200 '
+    stripeReady.value = false;
+    document.querySelector('#topup-card-error')!.textContent = $t('settings.stripeError');
   }
-}
+};
 
-watch(() => topUpAmount.value, () => {
-  if (topUpAmount.value > 0) stripeTopupInit()
-})
-
+// Обработчик пополнения через Stripe
 const submitStripeTopup = async () => {
-  isProcessingTopup.value = true
-  const result = await stripeTopup.confirmCardPayment(topupClientSecret, {
-    payment_method: { card: topupCard }
-  })
+  if (!topupClientSecret || !stripeTopup || !topupCard) return;
 
-  if (result.error) {
-    document.querySelector('#topup-card-error').textContent = result.error.message
-    isProcessingTopup.value = false
-  } else {
+  isProcessingTopup.value = true;
+  try {
+    const result = await stripeTopup.confirmCardPayment(topupClientSecret, {
+      payment_method: { card: topupCard },
+    });
+
+    if (result.error) {
+      document.querySelector('#topup-card-error')!.textContent = result.error.message;
+      isProcessingTopup.value = false;
+      return;
+    }
+
     await $fetch('/api/topup-request', {
       method: 'POST',
       body: {
         amount: topUpAmount.value,
-        stripeId: result.paymentIntent.id
-      }
-    })
-    router.push('/success') 
+        stripeId: result.paymentIntent.id,
+        userId: authStore.user?.id,
+      },
+    });
+    await userStore.fetchUser(); // Обновляем баланс
+    topUpAmount.value = 0;
+    stripeReady.value = false;
+    router.push('/success');
+  } catch (e) {
+    document.querySelector('#topup-card-error')!.textContent = $t('settings.stripeError');
+    isProcessingTopup.value = false;
   }
-}
+};
 
-onMounted(async () => {
-  userStore.isLoading = true
-  await authStore.fetchUser()
-  userStore.isLoading = false
-  transactions.value = await $fetch('/api/transactions')
-})
-
-const updatePassword = async () => {
-  if (!newPassword.value) return alert('Enter new password')
-  try {
-    await $fetch('/api/update-password', {
-      method: 'POST',
-      body: { userId: user.id, newPassword: newPassword.value }
-    })
-    router.push('/success') // ✅ перенаправляем
-  } catch {
-    alert('Error updating password')
-  }
-}
-
+// Обработчик вывода средств
 const submitWithdraw = async () => {
+  if (!withdrawAmount.value || !cardInfo.value) {
+    alert($t('settings.withdrawError'));
+    return;
+  }
+
   try {
     await $fetch('/api/withdrawal-request', {
       method: 'POST',
       body: {
+        userId: authStore.user?.id,
         amount: withdrawAmount.value,
-        cardInfo: cardInfo.value
-      }
-    })
-    router.push('/success') // ✅ перенаправляем
-  } catch (e) {
-    alert('Ошибка: ' + e?.data?.message)
+        cardInfo: cardInfo.value,
+      },
+    });
+    await userStore.fetchUser(); // Обновляем баланс
+    withdrawAmount.value = 0;
+    cardInfo.value = '';
+    router.push('/success');
+  } catch (e: any) {
+    alert(`${$t('settings.error')}: ${e?.data?.message || e.message}`);
   }
-}
+};
 
+// Создание выкупа
+const createBuyback = async () => {
+  if (!buybackProductId.value || !buybackPrice.value) {
+    alert($t('settings.buybackError'));
+    return;
+  }
+
+  try {
+    await buybackStore.createBuyback(authStore.user!.id, buybackProductId.value, buybackPrice.value);
+    buybackProductId.value = 0;
+    buybackPrice.value = 0;
+    await buybackStore.fetchUserBuybacks(authStore.user!.id);
+  } catch (e: any) {
+    alert(`${$t('settings.error')}: ${e?.data?.message || e.message}`);
+  }
+};
+
+// Обновление пароля
+const updatePassword = async () => {
+  if (!newPassword.value) {
+    alert($t('settings.passwordError'));
+    return;
+  }
+
+  try {
+    await $fetch('/api/update-password', {
+      method: 'POST',
+      body: { userId: authStore.user!.id, newPassword: newPassword.value },
+    });
+    newPassword.value = '';
+    router.push('/success');
+  } catch (e: any) {
+    alert(`${$t('settings.error')}: ${e?.data?.message || e.message}`);
+  }
+};
+
+// Удаление аккаунта
 const deleteAccount = async () => {
-  if (!confirm('Are you sure you want to delete your account?')) return
+  if (!confirm($t('settings.confirmDelete'))) return;
+
   try {
     await $fetch('/api/delete-user', {
       method: 'POST',
-      body: { userId: user.id }
-    })
-    useCookie('auth_token').value = null
-    authStore.logout()
-    router.push('/auth')
-  } catch {
-    alert('Error deleting account')
+      body: { userId: authStore.user!.id },
+    });
+    useCookie('auth_token').value = null;
+    authStore.logout();
+    router.push('/auth');
+  } catch (e: any) {
+    alert(`${$t('settings.error')}: ${e?.data?.message || e.message}`);
   }
-}
+};
+
+// Загрузка данных при монтировании
+onMounted(async () => {
+  userStore.isLoading = true;
+  try {
+    await authStore.fetchUser();
+    if (authStore.user?.id) {
+      await userStore.fetchUser();
+      await buybackStore.fetchUserBuybacks(authStore.user.id);
+      transactions.value = await ($fetch as any)('/api/transactions', {
+        query: { userId: authStore.user.id },
+      });
+    }
+  } catch (e) {
+    console.error('Error loading data:', e);
+  } finally {
+    userStore.isLoading = false;
+  }
+});
+
+// Наблюдение за изменением суммы пополнения
+watch(topUpAmount, () => {
+  if (topUpAmount.value >= 200) {
+    stripeTopupInit();
+  } else {
+    stripeReady.value = false;
+    document.querySelector('#topup-card-error')!.textContent = topUpAmount.value > 0 ? $t('settings.minAmountError') : '';
+  }
+});
 </script>

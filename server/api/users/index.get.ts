@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { createError } from "h3";
 
 const prisma = new PrismaClient();
 
@@ -11,6 +12,9 @@ export default defineEventHandler(async () => {
         email: true,
         role: true,
         avatar: true,
+        balance: true,
+        level: true,
+        isBalanceFrozen: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -19,6 +23,7 @@ export default defineEventHandler(async () => {
       },
     });
 
+    console.log("Fetched users:", users); // Добавь для отладки
     return users;
   } catch (error: any) {
     console.error("Get users error:", error);

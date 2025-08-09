@@ -1,3 +1,5 @@
+все еще редеректет не могу понять откуда
+
 <template>
   <div id="AuthPage" class="w-full h-screen bg-white grid grid-cols-1 md:grid-cols-2">
     
@@ -172,6 +174,8 @@ const errorMessage = ref('')
 const router = useRouter()
 const authToken = useCookie('auth_token')
 
+const refCode = ref('')
+
 
 const mode = ref<'login' | 'register' | 'forgot' | 'reset'>('login')
 const code = ref('')
@@ -191,6 +195,17 @@ useHead({
 
 onMounted(() => {
   authStore.fetchUser()
+
+  const route = useRoute()
+  const urlRef = route.query.ref
+
+  if (typeof urlRef === 'string') {
+    refCode.value = urlRef
+    localStorage.setItem('ref', urlRef)
+  } else {
+    const savedRef = localStorage.getItem('ref')
+    if (savedRef) refCode.value = savedRef
+  }
 })
 
 const handleSubmit = async () => {
@@ -221,12 +236,22 @@ const handleSubmit = async () => {
         email.value = sentEmail.value
         password.value = ''
       }
-    } else {
-      const res = await $fetch(`/api/${mode.value}`, {
-        method: 'POST',
-        body: { email: email.value, password: password.value }
-      })
+    }  else {
+          const body: any = {
+            email: email.value,
+            password: password.value,
+          }
+
+          if (mode.value === 'register' && refCode.value) {
+            body.refCode = refCode.value
+          }
+
+          const res = await $fetch(`/api/${mode.value}`, {
+            method: 'POST',
+            body
+          })
       if (res?.success) {
+        localStorage.removeItem('ref')
         await nextTick()
         await authStore.fetchUser()
         const redirectPath = sessionStorage.getItem('redirectAfterAuth') || (authStore.user?.role === 'admin' ? '/admin' : '/')
@@ -264,3 +289,6 @@ const toggleMode = () => {
   background: white;
 }
 </style>
+
+
+тут есть редирект ?

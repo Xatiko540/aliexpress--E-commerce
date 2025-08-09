@@ -46,12 +46,13 @@
                     </div>
 
                     <div id="Items" class="bg-white rounded-lg p-4 mt-4">
-                        <div v-for="product in userStore.cart">
+                        <div v-for="product in userStore.cart.filter(p => p)">
                             <CartItem 
                                 :product="product" 
                                 :selectedArray="selectedArray"
                                 @selectedRadio="selectedRadioFunc"
-                            />
+                                @removeItem="removeFromSelected"
+                                />
                         </div>
                     </div>
                 </div>
@@ -144,13 +145,20 @@ const cards = ref<string[]>([
 ])
 
 const totalPriceComputed = computed(() => {
-  return userStore.cart.reduce((acc, prod) => acc + prod.price, 0) / 100
+  return (
+    userStore.cart
+      .filter(p => p) // защита от null
+      .reduce((acc, prod) => acc + prod.price, 0) / 100
+  ).toFixed(2)
 })
 
-const selectedRadioFunc = (item: any) => {
+const selectedRadioFunc = (item: { id: number; val: boolean }) => {
   const index = selectedArray.value.findIndex((i) => i.id === item.id)
-  if (index === -1) selectedArray.value.push(item)
-  else selectedArray.value.splice(index, 1)
+  if (item.val && index === -1) {
+    selectedArray.value.push({ id: item.id })
+  } else if (!item.val && index !== -1) {
+    selectedArray.value.splice(index, 1)
+  }
 }
 
 const goToCheckout = () => {
@@ -159,4 +167,12 @@ const goToCheckout = () => {
   userStore.checkout = filtered.map((item) => toRaw(item))
   navigateTo('/checkout')
 }
+
+
+const removeFromSelected = (id: number) => {
+  const index = selectedArray.value.findIndex(i => i.id === id)
+  if (index !== -1) selectedArray.value.splice(index, 1)
+}
+
+
 </script>

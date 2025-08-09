@@ -17,7 +17,8 @@ export default defineNuxtConfig({
 
   plugins: [
     '~/plugins/piniaPersist.client.ts',
-    '~/plugins/apexcharts.client.ts'
+    '~/plugins/apexcharts.client.ts',
+    // '~/plugins/vue-toastification.ts',
   ],
 
   pwa: {

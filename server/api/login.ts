@@ -4,6 +4,8 @@ import bcrypt from 'bcrypt'
 // @ts-ignore
 import jwt from 'jsonwebtoken'
 
+import { defineEventHandler, readBody, createError, setCookie } from 'h3'
+
 const prisma = new PrismaClient()
 
 export default defineEventHandler(async (event) => {

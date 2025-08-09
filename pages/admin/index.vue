@@ -48,7 +48,7 @@
       <ClientOnly>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="bg-white shadow rounded p-4">
-            <apexchart type="line" height="300" :options="chartOptions.sales" :series="series.sales" />
+           <apexchart type="line" height="300" :options="chartOptions.sales" :series="series.sales" />
           </div>
           <div class="bg-white shadow rounded p-4">
             <apexchart type="bar" height="300" :options="chartOptions.orders" :series="series.orders" />
@@ -88,13 +88,49 @@
 
 <script setup>
 import AdminLayout from '@/layouts/admin.vue'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { useRouter } from 'vue-router'
 import ChatContainer from '@/components/ChatContainer.vue'
 
+
+
 const userName = ref(' anonymity')
 const defaultAvatar = '/avatar.svg'
+
+
+const getMonthlyStats = (items, dateKey = 'created_at') => {
+  const result = new Array(12).fill(0)
+  for (const item of items) {
+    const date = new Date(item[dateKey])
+    const month = date.getMonth()
+    result[month] += 1
+  }
+  return result
+}
+
+const getMonthlySales = (orders) => {
+  const result = new Array(12).fill(0)
+  for (const order of orders) {
+    const month = new Date(order.created_at).getMonth()
+    const orderSum = (order.orderItem || []).reduce(
+      (sum, item) => sum + (item.product?.price || 0),
+      0
+    )
+    result[month] += orderSum
+  }
+  return result
+}
+
+const chartSales = computed(() => getMonthlySales(orders.value))
+const chartOrders = computed(() => getMonthlyStats(orders.value))
+const chartUsers = computed(() => getMonthlyStats(users.value))
+
+const series = computed(() => ({
+  sales: [{ name: 'Продажи', data: chartSales.value }],
+  orders: [{ name: 'Заказы', data: chartOrders.value }],
+  users: [{ name: 'Пользователи', data: chartUsers.value }]
+}))
 
 const chats = ref([
   {
@@ -164,9 +200,31 @@ const fetchStats = async () => {
   totalBalance.value = users.value.reduce((sum, u) => sum + (u.balance || 0), 0)
 }
 
+
+// const series = {
+//   sales: [{ name: 'Продажи', data: [10, 41, 35, 51, 49, 62, 69, 91, 100, 110, 95, 130] }],
+//   orders: [{ name: 'Заказы', data: [5, 15, 20, 30, 25, 35, 40, 38, 50, 60, 45, 70] }],
+//   users: [{ name: 'Пользователи', data: [100, 120, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900] }]
+// }
+
+const monthLabels = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек']
+
+const chartOptions = {
+  sales: { chart: { id: 'sales' }, xaxis: { categories: monthLabels } },
+  orders: { chart: { id: 'orders' }, xaxis: { categories: monthLabels } },
+  users: { chart: { id: 'users' }, xaxis: { categories: monthLabels } }
+}
+
+
 onMounted(async () => {
   if (!authStore.isInitialized) {
     await authStore.fetchUser()
+  }
+
+
+   if (authStore.user?.role !== 'ADMIN') {
+    alert('Доступ запрещён: только для администраторов')
+    return router.push('/') // не админ — на главную
   }
 
   // const user = authStore.user
@@ -179,17 +237,4 @@ onMounted(async () => {
   await fetchStats()
 })
 
-const series = {
-  sales: [{ name: 'Продажи', data: [10, 41, 35, 51, 49, 62, 69, 91, 100, 110, 95, 130] }],
-  orders: [{ name: 'Заказы', data: [5, 15, 20, 30, 25, 35, 40, 38, 50, 60, 45, 70] }],
-  users: [{ name: 'Пользователи', data: [100, 120, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900] }]
-}
-
-const monthLabels = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек']
-
-const chartOptions = {
-  sales: { chart: { id: 'sales' }, xaxis: { categories: monthLabels } },
-  orders: { chart: { id: 'orders' }, xaxis: { categories: monthLabels } },
-  users: { chart: { id: 'users' }, xaxis: { categories: monthLabels } }
-}
 </script>

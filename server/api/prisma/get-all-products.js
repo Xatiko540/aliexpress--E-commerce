@@ -2,6 +2,8 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 export default defineEventHandler(async (event) => {
-    let products = await prisma.products.findMany()
-    return products
+  const products = await prisma.products.findMany({
+    include: { images: true },
+  })
+  return products
 })

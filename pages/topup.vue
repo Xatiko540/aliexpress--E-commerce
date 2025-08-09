@@ -1,25 +1,48 @@
 <template>
   <MainLayout>
     <div class="max-w-[1200px] mx-auto px-4 py-6">
-      <h1 class="text-2xl font-bold mb-6">{{ $t('settings.title') }}</h1>
+      <!-- <h1 class="text-2xl font-bold mb-6">{{ $t('settings.title') }}</h1> -->
 
       <div class="bg-white rounded-lg p-6 shadow-md space-y-6">
         <!-- User Info -->
         <div>
-          <h2 class="text-lg font-semibold mb-2">{{ $t('settings.profile') }}</h2>
+          <!-- <h2 class="text-lg font-semibold mb-2">{{ $t('settings.profile') }}</h2> -->
           <div class="text-sm">{{ $t('settings.email') }}: <strong>{{ user?.email }}</strong></div>
-          <div class="text-sm mt-1">Balance: <strong>{{ user?.balance }}₽</strong></div>
+          <div class="text-sm mt-1">Баланс: <strong>{{ user?.balance }}₽</strong></div>
         </div>
 
         <hr />
 
         <!-- Transactions -->
-        <div>
+        <!-- <div>
           <h2 class="text-lg font-semibold mb-2">Transaction history</h2>
           <ul class="text-sm list-disc list-inside">
             <li v-for="tx in transactions" :key="tx.id">{{ tx.type }}: {{ tx.amount }}₽</li>
           </ul>
-        </div>
+        </div> -->
+
+
+          <!-- Transactions -->
+          <div>
+            <h2 class="text-lg font-semibold mb-2">История транзакций</h2>
+            <ul class="text-sm space-y-2">
+              <li v-for="tx in transactions" :key="tx.id" class="flex items-center gap-3">
+                <span class="font-medium">{{ typeLabel(tx.type) }}:</span>
+                <span>{{ tx.amount }}₽</span>
+                <span
+                  v-if="tx.status"
+                  class="px-2 py-0.5 rounded text-xs"
+                  :class="{
+                    'bg-yellow-100 text-yellow-700': tx.status === 'PENDING',
+                    'bg-green-100 text-green-700': tx.status === 'APPROVED',
+                    'bg-red-100 text-red-700': tx.status === 'REJECTED'
+                  }"
+                >
+                  {{ statusLabel(tx.status) }}
+                </span>
+              </li>
+            </ul>
+          </div>
 
         <hr />
 
@@ -57,7 +80,7 @@
     :class="isProcessingTopup ? 'opacity-60 cursor-not-allowed' : ''"
   >
     <Icon v-if="isProcessingTopup" name="eos-icons:loading" />
-    <span v-else>Pay and top up</span>
+    <span v-else>Пополнить</span>
   </button>
 </div>
 </form>
@@ -65,33 +88,37 @@
         <hr />
 
 
-<!-- Withdrawal Request -->
-<div>
-  <h2 class="text-lg font-semibold mb-2">Withdrawal of funds</h2>
-  <form @submit.prevent="submitWithdraw" class="space-y-2">
-    <input
-      type="number"
-      v-model.number="withdrawAmount"
-      placeholder="Sum (₽)"
-      class="border rounded w-full p-2"
-      min="1"
-    />
-    <input
-      type="text"
-      v-model="cardInfo"
-      placeholder="Card (**** **** **** 1234)"
-      class="border rounded w-full p-2"
-    />
-    <p v-if="withdrawError" class="text-red-600 text-sm font-medium">{{ withdrawError }}</p>
-    <button
-      :disabled="isWithdrawing"
-      class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
-    >
-      <span v-if="isWithdrawing">Sending...</span>
-      <span v-else>Request withdrawal</span>
-    </button>
-  </form>
-</div>
+        <!-- Withdrawal Request -->
+        <div>
+          <h2 class="text-lg font-semibold mb-2">Вывод средств</h2>
+          <form @submit.prevent="submitWithdraw" class="space-y-2">
+            <input
+              type="number"
+              v-model.number="withdrawAmount"
+              placeholder="Sum (₽)"
+              class="border rounded w-full p-2"
+              min="1"
+            />
+
+            <!-- Поле карты появляется только если введена сумма -->
+            <input
+              v-if="withdrawAmount > 0"
+              type="text"
+              v-model="cardInfo"
+              placeholder="Карта (**** **** **** 1234)"
+              class="border rounded w-full p-2"
+            />
+
+            <p v-if="withdrawError" class="text-red-600 text-sm font-medium">{{ withdrawError }}</p>
+            <button
+              :disabled="isWithdrawing"
+              class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
+            >
+              <span v-if="isWithdrawing">Отправка...</span>
+              <span v-else>Запрос на вывод средств</span>
+            </button>
+          </form>
+        </div>
 
         <hr />
 
@@ -134,6 +161,24 @@ const stripeReady = ref(false)
 
 const isWithdrawing = ref(false)
 const withdrawError = ref('')
+
+const typeLabel = (type) => {
+  switch (type) {
+    case 'TOPUP': return 'Пополнение';
+    case 'WITHDRAWAL': return 'Вывод';
+    default: return type;
+  }
+};
+
+
+const statusLabel = (status) => {
+  switch (status) {
+    case 'PENDING': return 'На рассмотрении'
+    case 'APPROVED': return 'Одобрено'
+    case 'REJECTED': return 'Отклонено'
+    default: return status
+  }
+}
 
 const submitWithdraw = async () => {
   withdrawError.value = ''

@@ -8,7 +8,7 @@
 
                         <div class="text-xl font-semibold mb-2">{{ $t('checkout.shipping') }}</div>
 
-                        <div v-if="currentAddress && currentAddress.data">
+                        <div v-if="currentAddress">
                             <NuxtLink 
                                 to="/address"
                                 class="flex items-center pb-2 text-blue-500 hover:text-red-400"
@@ -22,23 +22,23 @@
                                 <ul class="text-xs">
                                     <li class="flex items-center gap-2">
                                         <div>{{ $t('checkout.contactName') }}</div> 
-                                        <div class="font-bold">{{ currentAddress.data.name }}</div>
+                                        <div class="font-bold">{{ currentAddress.name }}</div>
                                     </li>
                                     <li class="flex items-center gap-2">
                                         <div>{{ $t('checkout.address') }}</div> 
-                                        <div class="font-bold">{{ currentAddress.data.address }}</div>
+                                        <div class="font-bold">{{ currentAddress.address }}</div>
                                     </li>
                                     <li class="flex items-center gap-2">
                                         <div>{{ $t('checkout.zip') }}</div> 
-                                        <div class="font-bold">{{ currentAddress.data.zipcode }}</div>
+                                        <div class="font-bold">{{ currentAddress.zipcode }}</div>
                                     </li>
                                     <li class="flex items-center gap-2">
                                         <div>{{ $t('checkout.city') }}</div> 
-                                        <div class="font-bold">{{ currentAddress.data.city }}</div>
+                                        <div class="font-bold">{{ currentAddress.city }}</div>
                                     </li>
                                     <li class="flex items-center gap-2">
                                         <div>{{ $t('checkout.country') }}</div> 
-                                        <div class="font-bold">{{ currentAddress.data.country }}</div>
+                                        <div class="font-bold">{{ currentAddress.country }}</div>
                                     </li>
                                 </ul>
                             </div>
@@ -138,6 +138,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '~/stores/user'
 import { useAuthStore } from '~/stores/auth'
 
+import { loadStripe } from '@stripe/stripe-js'
+
+
+
+
+
+
 import { useI18n } from 'vue-i18n'
 
 const { t: $t } = useI18n()
@@ -159,9 +166,16 @@ let form: any = null
 let clientSecret: string | null = null
 
 let total = ref(0)
-let currentAddress = ref(null)
+const currentAddress = ref<Address | null>(null)
 let isProcessing = ref(false)
 
+interface Address {
+  name: string
+  address: string
+  zipcode: string
+  city: string
+  country: string
+}
 
 useHead({
   title: 'Aliexpress | Checkout',
@@ -175,7 +189,8 @@ onBeforeMount(async () => {
 
   total.value = 0.00
   if (user.value) {
-    currentAddress.value = await useFetch(`/api/prisma/get-address-by-user/${user.value.id}`)
+const { data } = await useFetch<Address>(`/api/prisma/get-address-by-user/${user.value.id}`)
+if (data.value) currentAddress.value = data.value
     setTimeout(() => userStore.isLoading = false, 200)
   }
 })
@@ -195,7 +210,12 @@ watch(() => total.value, () => {
 
 const stripeInit = async () => {
   const runtimeConfig = useRuntimeConfig()
-  stripe = Stripe(runtimeConfig.public.stripePk)
+
+  stripe = await loadStripe(runtimeConfig.public.stripePk)
+  if (!stripe) {
+    console.error('Stripe failed to load')
+    return
+  }
 
   const res = await $fetch('/api/stripe/paymentintent', {
     method: 'POST',
@@ -212,18 +232,23 @@ const stripeInit = async () => {
       iconColor: "#EE4B2B"
     }
   }
+
   card = elements.create("card", { hidePostalCode: true, style })
   card.mount("#card-element")
+
   card.on("change", (event: any) => {
-    document.querySelector("button")!.disabled = event.empty
-    document.querySelector("#card-error")!.textContent = event.error?.message || ""
+    const button = document.querySelector("button")
+    const errorMsg = document.querySelector("#card-error")
+
+    if (button) button.disabled = event.empty
+    if (errorMsg) errorMsg.textContent = event.error?.message || ""
   })
 
   isProcessing.value = false
 }
 
 const pay = async () => {
-  if (!currentAddress.value?.data) return showError('Please add shipping address')
+  if (!currentAddress.value) return showError('Please add shipping address')
   isProcessing.value = true
 
   const result = await stripe.confirmCardPayment(clientSecret!, {
@@ -242,19 +267,19 @@ const pay = async () => {
 }
 
 const createOrder = async (stripeId: string) => {
-  await useFetch('/api/prisma/create-order', {
-    method: "POST",
-    body: {
-      userId: user.value.id,
-      stripeId,
-      name: currentAddress.value.data.name,
-      address: currentAddress.value.data.address,
-      zipcode: currentAddress.value.data.zipcode,
-      city: currentAddress.value.data.city,
-      country: currentAddress.value.data.country,
-      products: userStore.checkout
-    }
-  })
+await useFetch('/api/prisma/create-order', {
+  method: 'POST',
+  body: {
+    userId: user.value!.id,
+    stripeId,
+    name: currentAddress.value!.name,
+    address: currentAddress.value!.address,
+    zipcode: currentAddress.value!.zipcode,
+    city: currentAddress.value!.city,
+    country: currentAddress.value!.country,
+    products: userStore.checkout
+  } as any // или определи тип отдельно, если хочешь строго
+})
 }
 
 const showError = (msg: string) => {

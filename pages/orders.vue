@@ -14,7 +14,7 @@
           class="text-sm pl-[50px]"
         >
           <div class="border-b py-1">
-            <p>{{ $t('orders.stripeId') }}: {{ order.stripeId }}</p>
+            <!-- <p>{{ $t('orders.stripeId') }}: {{ order.stripeId }}</p> -->
 
             <div class="pt-2 space-y-2">
               <div 
@@ -25,7 +25,7 @@
                   class="flex items-center gap-3 p-1 hover:underline hover:text-blue-500" 
                   :to="`/item/${item.productId}`"
                 >
-                  <img width="40" :src="item.product.url">
+                  <img width="40" :src="item.product.images?.[0]?.url">
                   {{ item.product.title }}
                 </NuxtLink>
               </div>
@@ -60,6 +60,12 @@ const router = useRouter()
 const authStore = useAuthStore()
 const userStore = useUserStore()
 
+interface ProductImage {
+  id: number
+  productId: number
+  url: string
+}
+
 interface Product {
   id: number
   title: string
@@ -69,6 +75,7 @@ interface Product {
   category: string
   created_at: Date | null
   sellerId: string | null
+  images?: ProductImage[] // добавили изображения
 }
 
 interface OrderItem {
@@ -86,6 +93,7 @@ interface Order {
   city: string
   country: string
   orderItem: OrderItem[]
+  total?: number
 }
 
 const orders = ref<Order[]>([])

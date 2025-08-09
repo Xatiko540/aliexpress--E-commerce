@@ -1,5 +1,6 @@
-<script setup>
+<script setup lang="ts">
 import AdminLayout from "@/layouts/admin.vue"
+import { ref } from 'vue'
 
 const title = ref('')
 const description = ref('')
@@ -9,20 +10,25 @@ const category = ref('')
 const success = ref(false)
 
 const submit = async () => {
-  const res = await $fetch('/api/prisma/create-product', {
-    method: 'POST',
-    body: {
-      title: title.value,
-      description: description.value,
-      price: Number(price.value),
-      url: url.value,
-      category: category.value
-    }
-  })
+  try {
+    const res = await $fetch('/api/prisma/create-product', {
+      method: 'POST',
+      body: {
+        title: title.value,
+        description: description.value,
+        price: price.value,
+        url: url.value,
+        category: category.value,
+        images: [url.value] // отправляем в массив, даже если 1 изображение
+      }
+    })
 
-  if (res?.id) {
-    success.value = true
-    setTimeout(() => navigateTo('/admin/products'), 1500)
+    if (res?.id) {
+      success.value = true
+      setTimeout(() => navigateTo('/admin/products'), 1500)
+    }
+  } catch (err) {
+    console.error('Ошибка при добавлении товара:', err)
   }
 }
 </script>

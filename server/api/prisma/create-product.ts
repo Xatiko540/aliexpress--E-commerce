@@ -1,4 +1,4 @@
-// server/api/prisma/create-order.ts
+// server/api/prisma/create-product.ts
 import { defineEventHandler, readBody, createError, getCookie } from 'h3'
 import { PrismaClient } from '@prisma/client'
 import jwt from 'jsonwebtoken'
@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const { title, description, price, url, category } = body
+  const { title, description, price, url, category, images } = body
 
   if (!title || !price || !url || !category) {
     throw createError({ statusCode: 400, statusMessage: 'Заполните все поля: title, price, url, category' })
@@ -41,7 +41,13 @@ export default defineEventHandler(async (event) => {
       url,
       price: priceInt * 100,
       category,
-      sellerId: payload.id
+      sellerId: payload.id,
+      images: {
+        create: (images || [url]).map((img: string) => ({ url: img }))
+      }
+    },
+    include: {
+      images: true
     }
   })
 

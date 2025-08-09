@@ -18,10 +18,10 @@
           <tbody>
             <tr v-for="ret in returns" :key="ret.id" class="border-b">
               <td class="px-3 py-2">{{ ret.id }}</td>
-              <td class="px-3 py-2">{{ ret.user?.email }}</td>
-              <td class="px-3 py-2">{{ ret.product?.title }}</td>
+              <td class="px-3 py-2">{{ ret.user?.email || '—' }}</td>
+              <td class="px-3 py-2">{{ ret.product?.title || '—' }}</td>
               <td class="px-3 py-2">{{ ret.status }}</td>
-              <td class="px-3 py-2">{{ ret.amount || '—' }}</td>
+              <td class="px-3 py-2">{{ ret.amount ?? '—' }}</td>
               <td class="px-3 py-2">{{ ret.confirmed ? '✅' : '⏳' }}</td>
               <td class="px-3 py-2">{{ formatDate(ret.createdAt) }}</td>
             </tr>
@@ -39,14 +39,28 @@ import { ref, onMounted } from 'vue'
 const returns = ref([])
 
 const fetchReturns = async () => {
-  const res = await useFetch('/api/prisma/get-return-history')
-  returns.value = res.data.value || []
+  const { data, error } = await useFetch('/api/prisma/get-return-history')
+
+  if (!error.value && Array.isArray(data.value)) {
+    // сортировка на фронте по дате (на всякий случай)
+    returns.value = data.value.sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    )
+  } else {
+    console.error('Ошибка загрузки возвратов', error.value)
+  }
 }
+
 onMounted(fetchReturns)
 
 const formatDate = (dateStr) => {
+  if (!dateStr) return '—'
   return new Date(dateStr).toLocaleDateString('ru-RU', {
-    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
   })
 }
 </script>

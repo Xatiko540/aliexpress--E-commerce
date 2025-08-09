@@ -38,7 +38,7 @@
               <td class="px-3 py-2">{{ product.id }}</td>
               <td class="px-3 py-2">
                 <img
-                  :src="product.url"
+                   :src="product.images?.[0]?.url"
                   alt="product"
                   class="w-12 h-12 object-cover rounded"
                 />
@@ -46,17 +46,18 @@
               <td class="px-3 py-2">{{ product.title }}</td>
               <td class="px-3 py-2">{{ product.price / 100 }} ₽</td>
               <td class="px-3 py-2 space-x-1">
-                <button
-                  @click="startEdit(product)"
-                  class="text-xs px-2 py-1 rounded bg-blue-100 text-blue-800"
-                >
-                  Редактировать
-                </button>
-                <button
-                  class="text-xs px-2 py-1 rounded bg-red-100 text-red-800"
-                >
-                  Удалить
-                </button>
+                  <button
+                      @click="startEdit(product)"
+                      class="text-xs px-2 py-1 rounded bg-blue-100 text-blue-800"
+                    >
+                      Редактировать
+                    </button>
+                    <button
+                      @click="deleteProduct(product.id)"
+                      class="text-xs px-2 py-1 rounded bg-red-100 text-red-800"
+                    >
+                      Удалить
+                    </button>
               </td>
             </tr>
           </tbody>
@@ -69,8 +70,16 @@
           <h3 class="text-lg font-semibold">Редактирование товара</h3>
           <input v-model="editingProduct.title" placeholder="Название" class="w-full border p-2 rounded" />
           <input v-model.number="editingProduct.price" type="number" placeholder="Цена (в копейках)" class="w-full border p-2 rounded" />
-          <input v-model="editingProduct.url" placeholder="URL изображения" class="w-full border p-2 rounded" />
-          <input type="file" @change="handleImageUpload" class="w-full border p-2 rounded" />
+          <textarea v-model="editingProduct.description" placeholder="Описание" class="w-full border p-2 rounded"></textarea>
+          <input type="file" multiple @change="handleImageUpload" class="w-full border p-2 rounded" />
+          <div class="flex gap-2 overflow-x-auto">
+              <img
+                v-for="(src, index) in imagePreviews"
+                :key="index"
+                :src="src"
+                class="w-16 h-16 object-cover rounded border"
+              />
+            </div>
           <div class="flex justify-end gap-2">
             <button @click="editingProduct = null" class="text-gray-500 px-4 py-1">Отмена</button>
             <button @click="submitEdit" class="bg-green-500 text-white px-4 py-1 rounded">Сохранить</button>
@@ -88,7 +97,7 @@ import AdminLayout from "@/layouts/admin.vue";
 const products = ref([])
 const searchQuery = ref('')
 const editingProduct = ref(null)
-const imageFile = ref(null)
+const imageFiles = ref([])
 
 const fetchProducts = async () => {
   const res = await useFetch('/api/prisma/get-all-products')
@@ -97,28 +106,55 @@ const fetchProducts = async () => {
 
 const startEdit = (product) => {
   editingProduct.value = { ...product }
-  imageFile.value = null
+  imageFiles.value = []
+  imagePreviews.value = []
+
+  // если у продукта уже есть изображения
+  if (product.images && Array.isArray(product.images)) {
+    imagePreviews.value = product.images.map(img => img.url)
+  }
 }
 
+const imagePreviews = ref([])
+
 const handleImageUpload = (e) => {
-  const file = e.target.files[0]
-  if (file) imageFile.value = file
+  const files = Array.from(e.target.files)
+  imageFiles.value = files
+  imagePreviews.value = files.map(file => URL.createObjectURL(file))
+}
+
+const deleteProduct = async (id) => {
+  if (!confirm('Удалить этот товар?')) return
+  try {
+    await $fetch(`/api/prisma/products/${id}`, { method: 'DELETE' })
+    await fetchProducts()
+  } catch (err) {
+    console.error('Ошибка при удалении товара:', err)
+    alert('Ошибка при удалении товара')
+  }
 }
 
 const submitEdit = async () => {
   const formData = new FormData()
   formData.append('title', editingProduct.value.title)
   formData.append('price', editingProduct.value.price.toString())
-  formData.append('url', editingProduct.value.url)
-  if (imageFile.value) formData.append('image', imageFile.value)
+  formData.append('description', editingProduct.value.description || '')
+
+  imageFiles.value.forEach(file => {
+    formData.append('images', file)
+  })
 
   await $fetch(`/api/prisma/products/${editingProduct.value.id}`, {
     method: 'PATCH',
     body: formData
   })
   await fetchProducts()
-  editingProduct.value = null
+    editingProduct.value = null
+    imageFiles.value = []
+    imagePreviews.value = []
 }
+
+
 
 const filteredProducts = computed(() => {
   if (!searchQuery.value) return products.value

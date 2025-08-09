@@ -8,10 +8,16 @@
               <CardTitle>Create User</CardTitle>
               <CardDescription>Add a new user to the system</CardDescription>
             </div>
+            <NuxtLink to="/admin/users">
+              <Button variant="outline">
+                <ArrowLeft class="w-4 h-4 mr-2" />
+                Назад
+              </Button>
+            </NuxtLink>
           </div>
         </CardHeader>
         <CardContent>
-          <form @submit.prevent="onSubmit" class="space-y-4">
+          <Form :submit="handleSubmit(onSubmit)" class="space-y-4">
             <!-- Avatar Upload -->
             <div class="flex items-center gap-4">
               <UiAvatar class="w-24 h-24">
@@ -31,21 +37,38 @@
             <!-- Username -->
             <div class="space-y-2">
               <Label for="username">Username</Label>
-              <Input id="username" v-model="username" placeholder="johndoe" />
+              <Input
+                id="username"
+                :value="username"
+                @input="(e: Event) => (username = (e.target as HTMLInputElement).value)"
+                placeholder="johndoe"
+              />
               <span v-if="usernameError" class="text-sm text-destructive">{{ usernameError }}</span>
             </div>
 
             <!-- Email -->
             <div class="space-y-2">
               <Label for="email">Email</Label>
-              <Input id="email" v-model="email" type="email" placeholder="john@example.com" />
+              <Input
+                id="email"
+                type="email"
+                :value="email"
+                @input="(e: Event) => (email = (e.target as HTMLInputElement).value)"
+                placeholder="john@example.com"
+              />
               <span v-if="emailError" class="text-sm text-destructive">{{ emailError }}</span>
             </div>
 
             <!-- Password -->
             <div class="space-y-2">
               <Label for="password">Password</Label>
-              <Input id="password" v-model="password" type="password" placeholder="••••••••" />
+              <Input
+                id="password"
+                type="password"
+                :value="password"
+                @input="(e: Event) => (password = (e.target as HTMLInputElement).value)"
+                placeholder="••••••••"
+              />
               <span v-if="passwordError" class="text-sm text-destructive">{{ passwordError }}</span>
             </div>
 
@@ -57,47 +80,51 @@
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="USER">User</SelectItem>
+                  <SelectItem value="ADMIN">Admin</SelectItem>
                 </SelectContent>
               </Select>
               <span v-if="roleError" class="text-sm text-destructive">{{ roleError }}</span>
             </div>
 
+            <!-- Level -->
+            <div class="space-y-2">
+              <Label for="level">Level</Label>
+              <Select v-model="level">
+                <SelectTrigger>
+                  <SelectValue placeholder="Select level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="VIP1">VIP1</SelectItem>
+                  <SelectItem value="VIP2">VIP2</SelectItem>
+                </SelectContent>
+              </Select>
+              <span v-if="levelError" class="text-sm text-destructive">{{ levelError }}</span>
+            </div>
+
             <!-- Submit -->
-            <Button type="submit" class="w-full" :disabled="isLoading">
+            <Button type="submit" class="w-full">
               {{ isLoading ? "Creating..." : "Create User" }}
             </Button>
-          </form>
+          </Form>
         </CardContent>
       </Card>
     </div>
   </AdminLayout>
 </template>
 
-
 <script setup lang="ts">
-import { ref, onMounted, type Ref } from "vue";
+import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useToast } from "@/components/ui/AppToast/use-toast";
 import AdminLayout from "@/layouts/admin.vue";
-import { z, ZodType } from "zod";
-import { useField, useForm } from "vee-validate";
+import { useField, useForm, Form } from "vee-validate";
 import { UiAvatar, UiAvatarImage, UiAvatarFallback } from "@/components/ui/avatar";
 import Select from "@/components/ui/select/Select.vue";
 import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
 import SelectContent from "@/components/ui/select/SelectContent.vue";
 import SelectItem from "@/components/ui/select/SelectItem.vue";
 import SelectValue from "@/components/ui/select/SelectValue.vue";
-
-// Define schema and inferred type
-const rawSchema = z.object({
-  username: z.string().min(3).max(50).regex(/^[a-zA-Z0-9_]+$/, "Only letters, numbers, _"),
-  email: z.string().email().max(255),
-  password: z.string().min(6).max(32),
-  role: z.enum(["ADMIN", "USER"]), // ← Исправлено
-});
-type Schema = z.infer<typeof rawSchema>;
 
 const router = useRouter();
 const { toast } = useToast();
@@ -107,13 +134,18 @@ const previewUrl = ref<string | null>(null);
 const avatarFile = ref<File | null>(null);
 const isLoading = ref(false);
 
-const { handleSubmit, setFieldValue, errors } = useForm<Schema>({
-  validationSchema: rawSchema,
+const {
+  value: level,
+  errorMessage: levelError,
+} = useField<string>("level");
+
+const { handleSubmit, setFieldValue, errors } = useForm({
   initialValues: {
     username: '',
     email: '',
     password: '',
     role: 'USER',
+    level: 'VIP1',
   },
 });
 
@@ -156,33 +188,43 @@ const handleFileInput = (event: Event) => {
   previewUrl.value = URL.createObjectURL(file);
 };
 
-const onSubmit = handleSubmit(async (values) => {
+const onSubmit = async (values: any) => {
+
+  console.log("Submit triggered");
+  console.log("Ошибки валидации:", errors.value);
+  console.log("🎯 onSubmit values:", values);
   try {
     isLoading.value = true;
 
     const payload = {
       username: values.username.trim(),
-      email: values.email.toLowerCase().trim(),
+      email: values.email.trim(),
       password: values.password,
-      role: values.role.toUpperCase() as "ADMIN" | "USER",
+      role: values.role,
+      level: values.level,
     };
 
-    console.log("📤 Sending payload:", payload);
+    console.log("📤 Payload being sent:", payload);
 
     const response = await $fetch("/api/users", {
       method: "POST",
       body: payload,
-   
     });
 
-    if (avatarFile.value) {
-      const formData = new FormData();
-      formData.append("avatar", avatarFile.value);
+    console.log("🔥 body received:", response);
 
-      await $fetch(`/api/users/avatar/${response.id}`, {
-        method: "POST",
-        body: formData,
-      });
+    try {
+      if (avatarFile.value) {
+        const formData = new FormData();
+        formData.append("avatar", avatarFile.value);
+
+        await $fetch(`/api/users/avatar/${response.id}`, {
+          method: "POST",
+          body: formData,
+        });
+      }
+    } catch (e) {
+      console.error("Ошибка загрузки аватара:", e);
     }
 
     toast({ title: "✅ Успех", description: "Пользователь создан" });
@@ -197,6 +239,5 @@ const onSubmit = handleSubmit(async (values) => {
   } finally {
     isLoading.value = false;
   }
-});
-
+};
 </script>
